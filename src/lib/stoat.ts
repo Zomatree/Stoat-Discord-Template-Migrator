@@ -94,8 +94,8 @@ export type DataEditServer = {
     system_messages?: SystemMessageChannels | null,
 }
 
-// const BASE_URL = "https://api.stoat.chat"
-const BASE_URL = "http://localhost:14702"
+const BASE_URL = "https://api.stoat.chat"
+// const BASE_URL = "http://localhost:14702"
 const AUTUMN_BASE_URL = "https://cdn.stoatusercontent.com"
 
 async function handleRatelimit(resp: Response): Promise<Response> {
