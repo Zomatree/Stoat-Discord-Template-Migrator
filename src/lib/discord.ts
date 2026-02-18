@@ -95,15 +95,18 @@ export type Guild = {
 
 export function fetchGuildTemplate(code: string): Promise<GuildTemplate> {
     return fetch(`https://discord.com/api/v10/guilds/templates/${code}`)
+        .then(async resp => { if (!resp.ok) { throw await resp.text() } else { return resp } })
         .then(resp => resp.json())
 }
 
 export function fetchBanner(guild_id: string, hash: string): Promise<Blob> {
     return fetch(`https://cdn.discordapp.com/banners/${guild_id}/${hash}.png`)
+        .then(async resp => { if (!resp.ok) { throw await resp.text() } else { return resp } })
         .then(resp => resp.blob())
 }
 
 export function fetchEmoji(emoji_id: string): Promise<Blob> {
     return fetch(`https://cdn.discordapp.com/emojis/${emoji_id}.webp`)
+        .then(async resp => { if (!resp.ok) { throw await resp.text() } else { return resp } })
         .then(resp => resp.blob())
 }

@@ -26,6 +26,7 @@ import {
     uploadFile,
     setRoleServerPermissions,
     setDefaultServerPermissions,
+    type Config,
 } from "./stoat";
 
 const PERM_MAP: [bigint, number][] = [
@@ -51,13 +52,13 @@ export function convertPermission(permission: string): number {
 export async function convertRole(
     server: StoatServer,
     discordRole: DiscordRole,
-    token: string,
+    config: Config,
 ): Promise<[StoatRole, StoatServer]> {
     let data_create = {
         name: discordRole.name,
     };
 
-    let stoatRole = await createRole(server._id, data_create, token);
+    let stoatRole = await createRole(server._id, data_create, config);
 
     let dataEdit = {
         hoist: discordRole.hoist,
@@ -69,13 +70,13 @@ export async function convertRole(
 
     let allow = convertPermission(discordRole.permissions);
 
-    await editRole(server._id, stoatRole._id, dataEdit, token);
+    await editRole(server._id, stoatRole._id, dataEdit, config);
 
     let newServer = await setRoleServerPermissions(
         server._id,
         stoatRole._id,
         { allow, deny: 0 },
-        token,
+        config,
     );
 
     return [newServer.roles![stoatRole._id], newServer];
@@ -86,7 +87,7 @@ export async function convertChannel(
     discordCategories: Record<string, DiscordChannel>,
     roleMapping: Record<string, StoatRole>,
     discordChannel: DiscordChannel,
-    token: string,
+    config: Config,
 ): Promise<StoatChannel> {
     let data = {
         name: discordChannel.name,
@@ -99,7 +100,7 @@ export async function convertChannel(
                 : null,
     };
 
-    let stoatChannel = await createChannel(server._id, data, token);
+    let stoatChannel = await createChannel(server._id, data, config);
 
     let categoryPerms = isNotNullish(discordChannel.parent_id) ? discordCategories[discordChannel.parent_id].permission_overwrites ?? [] : null
 
@@ -122,7 +123,7 @@ export async function convertChannel(
             stoatChannel = await setDefaultChannelPermissions(
                 stoatChannel._id,
                 { allow, deny },
-                token,
+                config,
             );
         } else {
             let role = roleMapping[overwrite.id];
@@ -131,7 +132,7 @@ export async function convertChannel(
                 stoatChannel._id,
                 role._id,
                 { allow, deny },
-                token,
+                config,
             );
         }
     }
@@ -142,18 +143,18 @@ export async function convertChannel(
 // export async function convertEmoji(
 //     server: StoatServer,
 //     emoji: DiscordEmoji,
-//     token: string,
+//     config: string,
 // ): Promise<StoatEmoji> {
 //     let blob = await fetchEmoji(emoji.id);
-//     let id = await uploadFile("emojis", blob, token);
-//     return await createEmoji(server._id, id, emoji.name, token);
+//     let id = await uploadFile("emojis", blob, config);
+//     return await createEmoji(server._id, id, emoji.name, config);
 // }
 
 export async function convertServer(
     server: StoatServer,
     guild: DiscordGuild,
     channelMapping: Record<string, StoatChannel>,
-    token: string,
+    config: Config,
 ): Promise<StoatServer> {
     let categories: StoatCategory[] = [];
 
@@ -174,7 +175,7 @@ export async function convertServer(
 
     if (typeof guild.banner == "string") {
         let blob = await fetchBanner(guild.id, guild.banner);
-        banner = await uploadFile("banners", blob, token);
+        banner = await uploadFile("banners", blob, config);
     }
 
     let system_channel_id = isNotNullish(guild.system_channel_id) ? channelMapping[guild.system_channel_id]._id : null;
@@ -195,13 +196,13 @@ export async function convertServer(
                 : null,
     };
 
-    await editServer(server._id, dataEdit, token);
+    await editServer(server._id, dataEdit, config);
 
     let defaultRole = guild.roles.find((r) => r.id == "0")!;
     server = await setDefaultServerPermissions(
         server._id,
         convertPermission(defaultRole.permissions),
-        token,
+        config,
     );
 
     return server;

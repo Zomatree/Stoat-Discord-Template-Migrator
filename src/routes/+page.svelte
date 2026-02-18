@@ -6,6 +6,7 @@
     let template_code = $state("");
     let token = $state("");
     let server_id = $state("");
+    let isBot = $state(false);
 
     let error: string | null = $state(null);
     let template: GuildTemplate | null = $state(null);
@@ -36,7 +37,7 @@
         };
 
         try {
-            server = await fetchServer(server_id, token);
+            server = await fetchServer(server_id, { token, isBot });
         } catch (e) {
             error = String(e)
             return;
@@ -49,7 +50,11 @@
 
 <h1>Discord Template Stoat Migrator</h1>
 <div>
-    {#if template == null && server == null}
+    {#if template != null && server != null}
+        <div>
+            <Converter guild={template.serialized_source_guild} server={server} token={token} isBot={isBot}/>
+        </div>
+    {:else}
         <div>
             <div>
                 <p>Discord Template:</p>
@@ -60,6 +65,10 @@
                 <input bind:value={token}>
             </div>
             <div>
+                <span>Is bot token:</span>
+                <input type="checkbox" bind:checked={isBot}>
+            </div>
+            <div>
                 <p>Stoat Server ID:</p>
                 <input bind:value={server_id}>
             </div>
@@ -67,10 +76,6 @@
             {#if error != null}
                 <p>{error}</p>
             {/if}
-        </div>
-    {:else if template != null && server != null}
-        <div>
-            <Converter guild={template.serialized_source_guild} server={server} token={token}/>
         </div>
     {/if}
 </div>

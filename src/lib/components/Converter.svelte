@@ -6,11 +6,13 @@
     let {
         guild = $bindable(),
         server = $bindable(),
-        token = $bindable()
+        token,
+        isBot,
     }: {
         guild: DiscordGuild,
         server: StoatServer,
-        token: string
+        token: string,
+        isBot: boolean,
     } = $props();
 
     let channelMapping: Record<string, StoatChannel> = $state({});
@@ -25,7 +27,8 @@
         };
 
         return categories
-    })
+    });
+    let config = $derived({ token, isBot });
 
     let status: "unset" | "running" | "done" = $state("unset");
 
@@ -42,7 +45,7 @@
             };
 
             let stoatRole;
-            [stoatRole, server] = await convertRole(server, role, token)
+            [stoatRole, server] = await convertRole(server, role, config)
             roleMapping[role.id] = stoatRole;
         };
 
@@ -51,10 +54,10 @@
                 continue;
             };
 
-            channelMapping[channel.id] = await convertChannel(server, discordCategories, roleMapping, channel, token);
+            channelMapping[channel.id] = await convertChannel(server, discordCategories, roleMapping, channel, config);
         };
 
-        server = await convertServer(server, guild, channelMapping, token);
+        server = await convertServer(server, guild, channelMapping, config);
 
         status = "done"
     }

@@ -98,6 +98,27 @@ const BASE_URL = "https://api.stoat.chat"
 // const BASE_URL = "http://localhost:14702"
 const AUTUMN_BASE_URL = "https://cdn.stoatusercontent.com"
 
+export type Config = {
+    token: string,
+    isBot: boolean,
+}
+
+function getHeaders(config: Config, body: boolean): Record<string, string> {
+    let headers: Record<string, string> = {"accept": "application/json"};
+
+    if (body) {
+        headers["content-type"] = "application/json";
+    };
+
+    if (config.isBot) {
+        headers["x-bot-token"] = config.token;
+    } else {
+        headers["x-session-token"] = config.token;
+    };
+
+    return headers;
+}
+
 async function handleRatelimit(resp: Response): Promise<Response> {
     console.log(resp.headers);
     let rlRemaining = resp.headers.get("X-Ratelimit-Remaining");
@@ -111,50 +132,53 @@ async function handleRatelimit(resp: Response): Promise<Response> {
     return resp
 }
 
-export async function createChannel(server_id: string, data: DataCreateChannel, token: string): Promise<Channel> {
-    return fetch(`${BASE_URL}/servers/${server_id}/channels`, {
-        method: "POST",
-        headers: {
-            "x-session-token": token,
-            "content-type": "application/json"
-        },
-        body: JSON.stringify(data)
-    })
-    .then(handleRatelimit)
-    .then(resp => resp.json())
-};
-
-export async function createRole(server_id: string, data: DataCreateRole, token: string): Promise<Role> {
-    return fetch(`${BASE_URL}/servers/${server_id}/roles`, {
-        method: "POST",
-        headers: {
-            "x-session-token": token,
-            "content-type": "application/json"
-        },
-        body: JSON.stringify(data)
-    })
-    .then(handleRatelimit)
-    .then(resp => resp.json())
-    .then(data => data["role"])
+async function handleErrorCode(resp: Response): Promise<Response> {
+    if (!resp.ok) {
+        throw await resp.text()
+    } else {
+        return resp
+    }
 }
 
-export async function uploadFile(tag: string, data: Blob, token: string): Promise<string> {
+export async function createChannel(server_id: string, data: DataCreateChannel, config: Config): Promise<Channel> {
+    return fetch(`${BASE_URL}/servers/${server_id}/channels`, {
+        method: "POST",
+        headers: getHeaders(config, true),
+        body: JSON.stringify(data)
+    })
+        .then(handleRatelimit)
+        .then(handleErrorCode)
+        .then(resp => resp.json())
+};
+
+export async function createRole(server_id: string, data: DataCreateRole, config: Config): Promise<Role> {
+    return fetch(`${BASE_URL}/servers/${server_id}/roles`, {
+        method: "POST",
+        headers: getHeaders(config, true),
+        body: JSON.stringify(data)
+    })
+        .then(handleRatelimit)
+        .then(handleErrorCode)
+        .then(resp => resp.json())
+        .then(data => data["role"])
+}
+
+export async function uploadFile(tag: string, data: Blob, config: Config): Promise<string> {
     let form = new FormData();
     form.set("file", data);
 
     return fetch(`${AUTUMN_BASE_URL}/${tag}`, {
         method: "POST",
-        headers: {
-            "x-session-token": token,
-        },
+        headers: getHeaders(config, false),
         body: form
     })
-    .then(handleRatelimit)
-    .then(resp => resp.json())
-    .then(data => data["id"])
+        .then(handleRatelimit)
+        .then(handleErrorCode)
+        .then(resp => resp.json())
+        .then(data => data["id"])
 }
 
-// export async function createEmoji(server_id: string, id: string, name: string, token: string): Promise<Emoji> {
+// export async function createEmoji(server_id: string, id: string, name: string, config: Config): Promise<Emoji> {
 //     return fetch(`${BASE_URL}/custom/${id}`, {
 //         method: "POST",
 //         headers: {
@@ -167,117 +191,103 @@ export async function uploadFile(tag: string, data: Blob, token: string): Promis
 //         })
 //     })
 //     .then(handleRatelimit)
+// .then(handleErrorCode)
 //     .then(resp => resp.json())
 //     .then(data => data["role"])
 // }
 
-export async function setDefaultServerPermissions(server_id: string, permissions: number, token: string): Promise<Server> {
+export async function setDefaultServerPermissions(server_id: string, permissions: number, config: Config): Promise<Server> {
     return fetch(`${BASE_URL}/servers/${server_id}/permissions/default`, {
         method: "PUT",
-        headers: {
-            "x-session-token": token,
-            "content-type": "application/json"
-        },
+        headers: getHeaders(config, true),
         body: JSON.stringify({
             permissions
         })
     })
-    .then(handleRatelimit)
-    .then(resp => resp.json())
+        .then(handleRatelimit)
+        .then(handleErrorCode)
+        .then(resp => resp.json())
 }
 
-export async function setRoleServerPermissions(server_id: string, role_id: string, permissions: Override, token: string): Promise<Server> {
+export async function setRoleServerPermissions(server_id: string, role_id: string, permissions: Override, config: Config): Promise<Server> {
     return fetch(`${BASE_URL}/servers/${server_id}/permissions/${role_id}`, {
         method: "PUT",
-        headers: {
-            "x-session-token": token,
-            "content-type": "application/json"
-        },
+        headers: getHeaders(config, true),
         body: JSON.stringify({
             permissions
         })
     })
-    .then(handleRatelimit)
-    .then(resp => resp.json())
+        .then(handleRatelimit)
+        .then(handleErrorCode)
+        .then(resp => resp.json())
 }
 
-export async function editRoleRanks(server_id: string, ranks: string[], token: string): Promise<Server> {
+export async function editRoleRanks(server_id: string, ranks: string[], config: Config): Promise<Server> {
     return fetch(`${BASE_URL}/servers/${server_id}/roles/ranks`, {
         method: "PATCH",
-        headers: {
-            "x-session-token": token,
-            "content-type": "application/json"
-        },
+        headers: getHeaders(config, true),
         body: JSON.stringify({
             ranks
         })
     })
-    .then(handleRatelimit)
-    .then(resp => resp.json())
+        .then(handleRatelimit)
+        .then(handleErrorCode)
+        .then(resp => resp.json())
 }
 
-export async function editRole(server_id: string, role_id: string, data: DataEditRole, token: string): Promise<Server> {
+export async function editRole(server_id: string, role_id: string, data: DataEditRole, config: Config): Promise<Server> {
     return fetch(`${BASE_URL}/servers/${server_id}/roles/${role_id}`, {
         method: "PATCH",
-        headers: {
-            "x-session-token": token,
-            "content-type": "application/json"
-        },
+        headers: getHeaders(config, true),
         body: JSON.stringify(data)
     })
-    .then(handleRatelimit)
-    .then(resp => resp.json())
+        .then(handleRatelimit)
+        .then(handleErrorCode)
+        .then(resp => resp.json())
 }
 
-export async function editServer(server_id: string, data: DataEditServer, token: string): Promise<Server> {
+export async function editServer(server_id: string, data: DataEditServer, config: Config): Promise<Server> {
     return fetch(`${BASE_URL}/servers/${server_id}`, {
         method: "PATCH",
-        headers: {
-            "x-session-token": token,
-            "content-type": "application/json"
-        },
+        headers: getHeaders(config, true),
         body: JSON.stringify(data)
     })
-    .then(handleRatelimit)
-    .then(resp => resp.json())
+        .then(handleRatelimit)
+        .then(handleErrorCode)
+        .then(resp => resp.json())
 }
 
-export async function setDefaultChannelPermissions(channel_id: string, permissions: Override, token: string): Promise<Channel> {
+export async function setDefaultChannelPermissions(channel_id: string, permissions: Override, config: Config): Promise<Channel> {
     return fetch(`${BASE_URL}/channels/${channel_id}/permissions/default`, {
         method: "PUT",
-        headers: {
-            "x-session-token": token,
-            "content-type": "application/json"
-        },
+        headers: getHeaders(config, true),
         body: JSON.stringify({
             permissions
         })
     })
-    .then(handleRatelimit)
-    .then(resp => resp.json())
+        .then(handleRatelimit)
+        .then(handleErrorCode)
+        .then(resp => resp.json())
 }
 
-export async function setRoleChannelPermissions(channel_id: string, role_id: string, permissions: Override, token: string): Promise<Channel> {
+export async function setRoleChannelPermissions(channel_id: string, role_id: string, permissions: Override, config: Config): Promise<Channel> {
     return fetch(`${BASE_URL}/channels/${channel_id}/permissions/${role_id}`, {
         method: "PUT",
-        headers: {
-            "x-session-token": token,
-            "content-type": "application/json"
-        },
+        headers: getHeaders(config, true),
         body: JSON.stringify({
             permissions
         })
     })
-    .then(handleRatelimit)
-    .then(resp => resp.json())
+        .then(handleRatelimit)
+        .then(handleErrorCode)
+        .then(resp => resp.json())
 }
 
-export async function fetchServer(server_id: string, token: string): Promise<Server> {
+export async function fetchServer(server_id: string, config: Config): Promise<Server> {
     return fetch(`${BASE_URL}/servers/${server_id}?include_channels=true`, {
-        headers: {
-            "x-session-token": token,
-        },
+        headers: getHeaders(config, false),
     })
-    .then(handleRatelimit)
-    .then(resp => resp.json())
+        .then(handleRatelimit)
+        .then(handleErrorCode)
+        .then(resp => resp.json())
 }
